@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TransferDB - Kayit</title>
+</head>
+<body>
+    <h2>Yeni Kullanici Kaydi</h2>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <ul>
+        {% for message in messages %}
+          <li>{{ message }}</li>
+        {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="/register">
+        <label>Kayit Olunacak Rol (sadece ornek):</label>
+        <select name="role">
+            <option value="Player">Player</option>
+        </select><br><br>
+        
+        <label>Kullanici Adi:</label>
+        <input type="text" name="username" required><br><br>
+        
+        <label>Sifre:</label>
+        <input type="password" name="password" required>
+        <small>en az 8 karakter, 1 buyuk/kucuk harf, 1 rakam, 1 ozel karakter</small><br><br>
+        
+        <button type="submit">Kayit Ol</button>
+    </form>
+    <br>
+    <a href="/login">Giris Ekranina Don</a>
+</body>
+</html>
