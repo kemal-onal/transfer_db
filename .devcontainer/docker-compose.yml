@@ -1,0 +1,15 @@
+version: '3.8'
+services:
+  app:
+    image: mcr.microsoft.com/devcontainers/python:3.10
+    volumes:
+      - ..:/workspace:cached
+    command: sleep infinity
+    links:
+      - db
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: transferdb
