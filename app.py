@@ -9,9 +9,9 @@ app.secret_key = 'cmpe321_super_secret_key' # sessionlar icin gerekli
 # veritabani baglantisi fonksiyonu
 def get_db_connection():
     return mysql.connector.connect(
-        host='db',
-        user='root', # kendi mysql kullanici adin
-        password='password', # kendi mysql sifren
+        host='db', # docker-compose'daki db servisinin adi
+        user='root',
+        password='password',
         database='transferdb'
     )
 
@@ -134,5 +134,13 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
+@app.errorhandler(500)
+def internal_error(error):
+    return f"<h3>Sunucu Hatası (500)</h3><p>Kod çalışırken bir yerde patladı. Lütfen Codespace terminalindeki en alt satırlarda yazan kırmızı hataya bak.</p><p>Muhtemel sebep: Veritabanına bağlanılamadı veya tablo bulunamadı.</p>", 500
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    return f"<h3>Beklenmeyen Bir Hata Oluştu:</h3><p>{str(e)}</p>", 500
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
