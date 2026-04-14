@@ -4,7 +4,7 @@
     <title>TransferDB - Login</title>
 </head>
 <body>
-    <h2>TransferDB Giris</h2>
+    <h2>TransferDB Login</h2>
     
     {% with messages = get_flashed_messages() %}
       {% if messages %}
@@ -17,7 +17,7 @@
     {% endwith %}
 
     <form method="POST" action="/login">
-        <label>Rol:</label>
+        <label>Role:</label>
         <select name="role">
             <option value="Player">Player</option>
             <option value="Manager">Manager</option>
@@ -25,15 +25,15 @@
             <option value="DBManager">Database Manager</option>
         </select><br><br>
         
-        <label>Kullanici Adi:</label>
+        <label>Username:</label>
         <input type="text" name="username" required><br><br>
         
-        <label>Sifre:</label>
+        <label>Password:</label>
         <input type="password" name="password" required><br><br>
         
         <button type="submit">Giris Yap</button>
     </form>
     <br>
-    <a href="/register">Hesabin yok mu? Kayit ol</a>
+    <a href="/register">No account? Register</a>
 </body>
 </html>
