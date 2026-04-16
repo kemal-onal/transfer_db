@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block title %}Transfer + Kontrat{% endblock %}
+{% block body %}
+<h2>Transfer + Kontrat Kaydi</h2>
+<p><em>Kalici transferde eski Permanent otomatik olarak bugun sonlandirilir. Purchase ise
+oyuncunun market_value'si transfer_fee ile guncellenir. Kiralik icin aktif Permanent sart.</em></p>
+<form method="POST">
+  <div class="kv">
+    <label>Oyuncu:</label>
+    <select name="player_id" required>
+      {% for p in players %}
+        <option value="{{ p.person_ID }}">{{ p.name }} {{ p.surname }}
+          {% if p.cur_club %}[{{ p.cur_club }}]{% endif %}
+        </option>
+      {% endfor %}
+    </select>
+    <label>Hedef kulup:</label>
+    <select name="to_club_id" required>
+      {% for c in clubs %}<option value="{{ c.club_ID }}">{{ c.club_name }}</option>{% endfor %}
+    </select>
+    <label>Kontrat tipi:</label>
+    <select name="contract_type" required><option>Permanent</option><option>Loan</option></select>
+    <label>Haftalik ucret:</label><input type="number" step="0.01" name="weekly_wage" required>
+    <label>Transfer ucreti:</label><input type="number" step="0.01" name="transfer_fee" value="0" required>
+    <label>Kontrat bitis:</label><input type="date" name="end_date" required>
+  </div>
+  <br><button>Kaydet</button>
+</form>
+
+<h3>Son Transferler</h3>
+<table>
+  <tr><th>Tarih</th><th>Oyuncu</th><th>Kaynak</th><th>Hedef</th><th>Ucret</th><th>Tip</th></tr>
+  {% for t in transfers %}
+  <tr>
+    <td>{{ t.transfer_date }}</td>
+    <td>{{ t.name }} {{ t.surname }}</td>
+    <td>{{ t.from_name or '-' }}</td><td>{{ t.to_name }}</td>
+    <td>{{ t.transfer_fee }}</td><td>{{ t.transfer_type }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

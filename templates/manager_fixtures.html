@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}Fikstur{% endblock %}
+{% block body %}
+<h2>Fikstur ve Sonuclar — {{ club.club_name }}</h2>
+<form method="GET">
+  <label>Sezon:</label>
+  <select name="season">
+    <option value="">(hepsi)</option>
+    {% for s in seasons %}<option value="{{ s }}" {% if s==sel_season %}selected{% endif %}>{{ s }}</option>{% endfor %}
+  </select>
+  <label>Competition:</label>
+  <select name="competition_id">
+    <option value="">(hepsi)</option>
+    {% for c in comps %}<option value="{{ c.competition_ID }}" {% if c.competition_ID|string==sel_comp %}selected{% endif %}>{{ c.name }} ({{ c.season }})</option>{% endfor %}
+  </select>
+  <button type="submit">Filtrele</button>
+</form>
+<table>
+  <tr><th>Tarih</th><th>Competition</th><th>Stadyum</th>
+      <th>Ev</th><th>Deplasman</th><th>Skor</th><th>Sonuc</th></tr>
+  {% for r in rows %}
+  <tr>
+    <td>{{ r.match_datetime }}</td>
+    <td>{{ r.comp_name }} ({{ r.season }})</td>
+    <td>{{ r.stadium_name }}</td>
+    <td>{{ r.home_name }}</td><td>{{ r.away_name }}</td>
+    <td>
+      {% if r.home_goals is none %}Scheduled{% else %}{{ r.home_goals }}-{{ r.away_goals }}{% endif %}
+    </td>
+    <td>
+      {% if r.home_goals is none %}—
+      {% elif (r.home_club_ID == club.club_ID and r.home_goals > r.away_goals)
+            or (r.away_club_ID == club.club_ID and r.away_goals > r.home_goals) %}Galibiyet
+      {% elif r.home_goals == r.away_goals %}Beraberlik
+      {% else %}Maglubiyet
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

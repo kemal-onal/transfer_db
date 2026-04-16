@@ -1,48 +1,37 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Manager Paneli - {{ club.club_name }}</title>
-</head>
-<body>
-    <h1>Hoş Geldin, {{ session['username'] }}</h1>
-    <h3>Yönettiğin Kulüp: {{ club.club_name }}</h3>
+{% extends 'base.html' %}
+{% block title %}Menajer Paneli{% endblock %}
+{% block body %}
+<h2>Hos geldin, {{ username }}</h2>
+{% if not club %}
+  <p>Henuz bir kuluple iliskilendirilmedin. DB Manager seni atamali.</p>
+{% else %}
+  <h3>Kulup: {{ club.club_name }}</h3>
 
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}<div style="color: red;">{{ messages[0] }}</div>{% endif %}
-    {% endwith %}
-
-    <h2>Yaklaşan Maçlar ve Kadro Seçimi</h2>
-    {% for match in matches %}
-    <div style="border: 1px solid black; padding: 10px; margin-bottom: 10px;">
-        <p><strong>{{ match.comp_name }}</strong>: {{ match.home_name }} vs {{ match.away_name }}</p>
-        <p>Tarih: {{ match.match_date }} {{ match.match_time }}</p>
-        
-        <form action="/set_squad" method="POST">
-            <input type="hidden" name="match_id" value="{{ match.match_ID }}">
-            <input type="hidden" name="club_id" value="{{ club.club_ID }}">
-            
-            <table border="1">
-                <tr>
-                    <th>Seç</th>
-                    <th>Oyuncu</th>
-                    <th>Pozisyon</th>
-                    <th>İlk 11?</th>
-                </tr>
-                {% for player in players %}
-                <tr>
-                    <td><input type="checkbox" name="players" value="{{ player.person_ID }}"></td>
-                    <td>{{ player.name }} {{ player.surname }}</td>
-                    <td>{{ player.main_position }}</td>
-                    <td><input type="checkbox" name="starters" value="{{ player.person_ID }}"></td>
-                </tr>
-                {% endfor %}
-            </table>
-            <br>
-            <button type="submit">Kadroyu Onayla</button>
-        </form>
-    </div>
-    {% endfor %}
-
-    <br><a href="/logout">Çıkış Yap</a>
-</body>
-</html>
+  <h3>Yaklasan Maclar ve Kadro Secimi</h3>
+  {% if not matches %}<p>Yaklasan mac yok.</p>{% endif %}
+  {% for match in matches %}
+  <div style="border:1px solid #888; padding:10px; margin-bottom:10px;">
+    <p><strong>{{ match.comp_name }}</strong>:
+       {{ match.home_name }} vs {{ match.away_name }} —
+       {{ match.match_datetime }}</p>
+    <form action="{{ url_for('set_squad') }}" method="POST">
+      <input type="hidden" name="match_id" value="{{ match.match_ID }}">
+      <input type="hidden" name="club_id"  value="{{ club.club_ID }}">
+      <table>
+        <tr><th>Sec</th><th>Oyuncu</th><th>Pozisyon</th><th>Kontrat</th><th>Ilk 11?</th></tr>
+        {% for pl in players %}
+        <tr>
+          <td><input type="checkbox" name="players"  value="{{ pl.person_ID }}"></td>
+          <td>{{ pl.name }} {{ pl.surname }}</td>
+          <td>{{ pl.main_position }}</td>
+          <td>{{ pl.contract_type }}</td>
+          <td><input type="checkbox" name="starters" value="{{ pl.person_ID }}"></td>
+        </tr>
+        {% endfor %}
+      </table>
+      <br><button type="submit">Kadroyu Onayla</button>
+    </form>
+  </div>
+  {% endfor %}
+{% endif %}
+{% endblock %}

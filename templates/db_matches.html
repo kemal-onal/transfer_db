@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block title %}Mac Planlama{% endblock %}
+{% block body %}
+<h2>Mac Planla</h2>
+<form method="POST">
+  <div class="kv">
+    <label>Competition:</label>
+    <select name="competition_id" required>
+      {% for c in comps %}<option value="{{ c.competition_ID }}">{{ c.name }} ({{ c.season }})</option>{% endfor %}
+    </select>
+    <label>Ev sahibi kulup:</label>
+    <select name="home_club_id" required>{% for c in clubs %}<option value="{{ c.club_ID }}">{{ c.club_name }}</option>{% endfor %}</select>
+    <label>Deplasman kulup:</label>
+    <select name="away_club_id" required>{% for c in clubs %}<option value="{{ c.club_ID }}">{{ c.club_name }}</option>{% endfor %}</select>
+    <label>Stadyum:</label>
+    <select name="stadium_id" required>{% for s in stadiums %}<option value="{{ s.stadium_ID }}">{{ s.stadium_name }}</option>{% endfor %}</select>
+    <label>Hakem:</label>
+    <select name="referee_id" required>{% for r in referees %}<option value="{{ r.person_ID }}">{{ r.name }} {{ r.surname }}</option>{% endfor %}</select>
+    <label>Tarih-Saat:</label><input type="datetime-local" name="match_datetime" required>
+  </div>
+  <br><button>Planla</button>
+</form>
+
+<h3>Son 50 Mac</h3>
+<table>
+  <tr><th>Tarih</th><th>Competition</th><th>Ev</th><th>Deplasman</th>
+      <th>Stadyum</th><th>Hakem</th><th>Skor</th></tr>
+  {% for m in rows %}
+  <tr>
+    <td>{{ m.match_datetime }}</td>
+    <td>{{ m.comp_name }} ({{ m.season }})</td>
+    <td>{{ m.home_name }}</td><td>{{ m.away_name }}</td>
+    <td>{{ m.stadium_name }}</td>
+    <td>{{ m.ref_name }} {{ m.ref_surname }}</td>
+    <td>{% if m.home_goals is none %}Scheduled{% else %}{{ m.home_goals }}-{{ m.away_goals }}{% endif %}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

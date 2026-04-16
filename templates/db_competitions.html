@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}Competitions{% endblock %}
+{% block body %}
+<h2>Competitions</h2>
+<table>
+  <tr><th>Ad</th><th>Sezon</th><th>Ulke</th><th>Tip</th></tr>
+  {% for r in rows %}
+  <tr><td>{{ r.name }}</td><td>{{ r.season }}</td><td>{{ r.country }}</td><td>{{ r.competition_type }}</td></tr>
+  {% endfor %}
+</table>
+
+<h3>Yeni Competition</h3>
+<form method="POST">
+  <div class="kv">
+    <label>Ad:</label><input name="name" required>
+    <label>Sezon:</label><input name="season" placeholder="ornek: 2025/2026" required>
+    <label>Ulke:</label><input name="country" required>
+    <label>Tip:</label>
+    <select name="competition_type" required>
+      <option>League</option><option>Cup</option><option>International</option>
+    </select>
+  </div>
+  <br><button>Olustur</button>
+</form>
+{% endblock %}

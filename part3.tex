@@ -1,0 +1,426 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{enumitem}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{hyperref}
+\usepackage{amssymb}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+
+\title{TransferDB --- Part 3:\\Schema Refinement and Normalization}
+\author{Group 01}
+\date{April 2026}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+
+This document analyzes the relational schema from Project 1 for
+normalization compliance, catalogs every non-trivial functional
+dependency (FD) derived strictly from the project rules (forum
+clarification \#2), and reports the additional integrity constraints
+that were moved into \texttt{CHECK} constraints, triggers, and stored
+procedures in \texttt{init.sql}.
+
+Throughout, \emph{non-trivial} means an FD $X \to Y$ where $Y \not\subseteq X$.
+
+\section{Functional Dependencies}
+
+FDs are enumerated below per relation. Each FD follows from an explicit
+rule in the project specification or an explicit uniqueness/primary-key
+constraint. No FD is added from ``real-world'' assumptions, per forum
+clarification \#2.
+
+\subsection*{Person}
+\begin{itemize}[leftmargin=*]
+  \item \texttt{person\_ID} $\to$ \texttt{name, surname, nationality, date\_of\_birth} \hfill (PK)
+\end{itemize}
+
+\subsection*{Player}
+\begin{itemize}[leftmargin=*]
+  \item \texttt{person\_ID} $\to$ \texttt{username, password, market\_value, main\_position, strong\_foot, height} \hfill (PK)
+  \item \texttt{username} $\to$ \texttt{person\_ID} \hfill (UNIQUE)
+\end{itemize}
+
+\subsection*{Manager}
+\begin{itemize}[leftmargin=*]
+  \item \texttt{person\_ID} $\to$ \texttt{username, password, preferred\_formation, experience\_level} \hfill (PK)
+  \item \texttt{username} $\to$ \texttt{person\_ID} \hfill (UNIQUE)
+\end{itemize}
+
+\subsection*{Referee}
+\begin{itemize}[leftmargin=*]
+  \item \texttt{person\_ID} $\to$ \texttt{username, password, license\_level, years\_of\_experience} \hfill (PK)
+  \item \texttt{username} $\to$ \texttt{person\_ID} \hfill (UNIQUE)
+\end{itemize}
+
+\subsection*{DB\_Manager}
+\begin{itemize}[leftmargin=*]
+  \item \texttt{username} $\to$ \texttt{password} \hfill (PK)
+\end{itemize}
+
+\subsection*{Stadium}
+\begin{itemize}[leftmargin=*]
+  \item \texttt{stadium\_ID} $\to$ \texttt{stadium\_name, city, capacity} \hfill (PK)
+  \item \texttt{(stadium\_name, city)} $\to$ \texttt{stadium\_ID, capacity} \hfill (UNIQUE)
+\end{itemize}
+
+\subsection*{Club}
+\begin{itemize}[leftmargin=*]
+  \item \texttt{club\_ID} $\to$ \texttt{club\_name, stadium\_ID, city, foundation\_year, manager\_ID} \hfill (PK)
+  \item \texttt{club\_name} $\to$ \texttt{club\_ID, \dots} \hfill (UNIQUE)
+  \item \texttt{manager\_ID} $\to$ \texttt{club\_ID, \dots} \hfill (\emph{Manages} is 1:1)
+  \item \texttt{stadium\_ID} $\to$ \texttt{city} \hfill (derived from rule C8:
+    club city equals its home stadium's city, so knowing the stadium fixes
+    the city regardless of which club we look at)
+\end{itemize}
+
+\subsection*{Contract}
+\begin{itemize}[leftmargin=*]
+  \item \texttt{contract\_id} $\to$ \texttt{player\_id, club\_id, start\_date, end\_date, weekly\_wage, contract\_type} \hfill (PK)
+\end{itemize}
+
+\subsection*{Transfer\_Record}
+\begin{itemize}[leftmargin=*]
+  \item \texttt{transfer\_id} $\to$ \texttt{player\_id, from\_club\_id, to\_club\_id, transfer\_date, transfer\_fee, transfer\_type} \hfill (PK)
+\end{itemize}
+
+\subsection*{Competition}
+\begin{itemize}[leftmargin=*]
+  \item \texttt{competition\_ID} $\to$ \texttt{name, season, country, competition\_type} \hfill (PK)
+  \item \texttt{(name, season)} $\to$ \texttt{competition\_ID, country, competition\_type} \hfill (UNIQUE)
+\end{itemize}
+
+\subsection*{Match}
+\begin{itemize}[leftmargin=*]
+  \item \texttt{match\_ID} $\to$ \texttt{competition\_ID, home\_club\_ID, away\_club\_ID, stadium\_ID, referee\_ID, match\_datetime, attendance, home\_goals, away\_goals} \hfill (PK)
+  \item \texttt{(stadium\_ID, match\_datetime)} $\to$ all other attributes \hfill (forum \#2: 120-min rule forces uniqueness)
+  \item \texttt{(referee\_ID, match\_datetime)} $\to$ all other attributes \hfill (120-min rule for referees)
+  \item \texttt{(home\_club\_ID, match\_datetime)} $\to$ all other attributes \hfill (120-min rule for clubs)
+  \item \texttt{(away\_club\_ID, match\_datetime)} $\to$ all other attributes \hfill (120-min rule for clubs)
+\end{itemize}
+
+\subsection*{Match\_Stats}
+\begin{itemize}[leftmargin=*]
+  \item \texttt{(match\_ID, player\_id)} $\to$ \texttt{club\_id, is\_starter, minutes\_played,
+    position\_played, goals, assists, yellow\_cards, red\_cards, rating} \hfill (PK)
+  \item \texttt{(match\_ID, player\_id)} $\to$ \texttt{club\_id} is reinforced
+    by forum clarification C7: a player appears for exactly one side per match.
+\end{itemize}
+
+\subsection*{Suspension}
+\begin{itemize}[leftmargin=*]
+  \item \texttt{suspension\_id} $\to$ all other attributes \hfill (PK)
+  \item \texttt{(player\_id, triggering\_match\_ID)} $\to$ \texttt{suspension\_id, competition\_ID, reason, status, served\_match\_ID} \hfill (UNIQUE)
+\end{itemize}
+
+\section{BCNF Analysis}
+
+A relation is in Boyce-Codd Normal Form (BCNF) if, for every non-trivial
+FD $X \to Y$, $X$ is a superkey. We verify each relation below.
+
+\begin{longtable}{@{}lp{0.75\linewidth}@{}}
+\toprule
+\textbf{Relation} & \textbf{Analysis} \\
+\midrule\endhead
+
+Person & Only FD is \texttt{person\_ID} $\to$ rest. PK is a superkey. \textbf{BCNF.} \\[2pt]
+
+Player  & All LHSs (\texttt{person\_ID}, \texttt{username}) are
+  keys (PK and alternate key). \textbf{BCNF.} \\[2pt]
+
+Manager & Same structure as Player. \textbf{BCNF.} \\[2pt]
+
+Referee & Same structure as Player. \textbf{BCNF.} \\[2pt]
+
+DB\_Manager & Only FD \texttt{username} $\to$ \texttt{password}; LHS is PK.
+  \textbf{BCNF.} \\[2pt]
+
+Stadium & LHSs: \texttt{stadium\_ID} (PK), \texttt{(stadium\_name,city)}
+  (UNIQUE). Both superkeys. \textbf{BCNF.} \\[2pt]
+
+Club & LHSs: \texttt{club\_ID} (PK), \texttt{club\_name} (UNIQUE),
+  \texttt{manager\_ID} (UNIQUE, Manages is 1:1). \emph{However,}
+  \texttt{stadium\_ID} $\to$ \texttt{city} (rule C8) is a non-trivial FD
+  whose LHS is \emph{not} a superkey of Club --- multiple clubs may share
+  one stadium, so \texttt{stadium\_ID} is not unique in Club. This causes
+  a BCNF violation. See decomposition discussion below. \\[2pt]
+
+Contract & Only FD: \texttt{contract\_id} $\to$ rest. LHS is PK.
+  \textbf{BCNF.} \\[2pt]
+
+Transfer\_Record & PK $\to$ rest only. \textbf{BCNF.} \\[2pt]
+
+Competition & LHSs: \texttt{competition\_ID} (PK),
+  \texttt{(name, season)} (UNIQUE). Both superkeys. \textbf{BCNF.} \\[2pt]
+
+Match & LHSs include \texttt{match\_ID} (PK) and the four
+  \texttt{(X, match\_datetime)} candidate keys from forum \#2. All are
+  superkeys. \textbf{BCNF.} \\[2pt]
+
+Match\_Stats & Only non-trivial FD is
+  \texttt{(match\_ID, player\_id)} $\to$ rest. LHS is PK. \textbf{BCNF.}
+  \\[2pt]
+
+Suspension & LHSs: \texttt{suspension\_id} (PK) and
+  \texttt{(player\_id, triggering\_match\_ID)} (UNIQUE). Both superkeys.
+  \textbf{BCNF.} \\
+
+\bottomrule
+\end{longtable}
+
+\subsection{Club: BCNF Discussion and Our Decision}
+
+The FD \texttt{stadium\_ID} $\to$ \texttt{city} in Club is the only
+BCNF-violating dependency in the schema. Because multiple clubs may
+share a stadium (the spec's \emph{Home\_Stadium} relationship is
+\texttt{Club $\to$ Stadium}, N:1), \texttt{stadium\_ID} is not a key of
+Club, so the dependency places the same fact
+(\texttt{stadium\_ID} $\to$ \texttt{city}) in many Club rows
+redundantly.
+
+\textbf{3NF check:} The dependency is trivial in 3NF terms because
+\texttt{city} is already functionally dependent on a superkey
+(\texttt{club\_ID}). Since \texttt{city} is also determined (indirectly)
+by \texttt{stadium\_ID}, the \texttt{city} column is \emph{partially
+redundant} but Club is still in 3NF (the condition ``every non-prime
+attribute is non-transitively dependent on every candidate key'' holds
+in the weaker 3NF formulation because the chain
+\texttt{club\_ID} $\to$ \texttt{stadium\_ID} $\to$ \texttt{city} is
+exactly the kind of transitive dependency that a BCNF decomposition
+would remove).
+
+\textbf{Candidate decompositions:}
+\begin{enumerate}[leftmargin=*]
+\item \emph{Drop \texttt{city} from Club.} Derive it via a join to
+  Stadium at read time. This gives
+  \texttt{Club(club\_ID, club\_name, stadium\_ID, foundation\_year, manager\_ID)}
+  which is in BCNF and lossless-join / dependency-preserving (Stadium
+  already holds city).
+\item \emph{Project into two relations:}
+  \texttt{Club1(club\_ID, club\_name, stadium\_ID, foundation\_year, manager\_ID)}
+  and \texttt{Club2(stadium\_ID, city)} (which is a restriction of
+  Stadium). Still BCNF, lossless, dependency-preserving, but redundant
+  with Stadium.
+\end{enumerate}
+
+\textbf{Our decision:} we kept \texttt{city} inside Club rather than
+decomposing. The driving reason is that rule C8 (``club city equals
+stadium city'') must be \emph{enforced} at write time. With the
+\texttt{city} column physically present in Club we can validate it in
+triggers \texttt{trg\_club\_city\_ins} and
+\texttt{trg\_club\_city\_upd} without cross-row joins in the trigger
+body. Removing the column would shift validation to the application
+layer or force each write to re-check via a subquery against Stadium,
+which MySQL \texttt{CHECK} cannot do and which is more expensive per
+insert. The schema is in 3NF, and the redundancy is compensated for by
+the two triggers, which guarantee that the \texttt{city} value in Club
+is always identical to its home stadium's.
+
+This is a deliberate trade-off between BCNF purity and enforceable
+integrity: since the ``anomaly'' that BCNF wants to prevent (someone
+updating Stadium.city without updating Club.city) is exactly the
+anomaly the trigger prevents, the practical gain of decomposition is
+zero.
+
+All other relations are in BCNF without decomposition.
+
+\section{Added Constraints Beyond Project 1 DDL}
+
+Project 1's DDL captured what SQL \texttt{CHECK} can express locally.
+Project 2 added every remaining business rule at the database level
+through triggers and stored procedures, so the database rejects invalid
+writes regardless of whether they come from the web UI or a direct
+MySQL client (spec \S 4, ``Strict Enforcement Rule'').
+
+\subsection{Local \texttt{CHECK} constraints (from Project 1 and tightened)}
+
+\begin{itemize}[leftmargin=*]
+  \item \texttt{Player.market\_value} $\geq 0$, \texttt{height} $> 0$.
+  \item \texttt{Referee.years\_of\_experience} $\geq 0$.
+  \item \texttt{Stadium.capacity} $> 0$ and \texttt{(stadium\_name, city)} unique.
+  \item \texttt{Contract.weekly\_wage} $> 0$, \texttt{end\_date} $>$ \texttt{start\_date}.
+  \item \texttt{Transfer\_Record.transfer\_fee} $\geq 0$;
+    \texttt{from\_club\_id} $\neq$ \texttt{to\_club\_id};
+    \texttt{Free} $\Rightarrow$ \texttt{fee} $= 0$
+    and non-\texttt{Free} $\Rightarrow$ \texttt{fee} $> 0$.
+  \item \texttt{Match.home\_club\_ID} $\neq$ \texttt{away\_club\_ID};
+    non-negative scores / attendance.
+  \item \texttt{Match\_Stats}: \texttt{minutes\_played} $\in [0, 120]$,
+    yellow \& red card ranges, \texttt{yellow\_cards < 2 OR red\_cards = 1}
+    (implements ``2 yellows $\Rightarrow$ red''),
+    \texttt{rating} $\in [1.0, 10.0]$.
+  \item \texttt{Competition.competition\_type} is a strict
+    \texttt{ENUM('League','Cup','International')} (forum \#1).
+\end{itemize}
+
+\subsection{Trigger-enforced constraints (Project 2 additions)}
+
+These require cross-row or cross-table reasoning that \texttt{CHECK}
+cannot express.
+
+\begin{longtable}{@{}p{0.25\linewidth}p{0.35\linewidth}p{0.35\linewidth}@{}}
+\toprule
+\textbf{Rule} & \textbf{Trigger / procedure} & \textbf{Enforcement} \\
+\midrule\endhead
+
+C1 --- Loan needs covering Permanent at a different club &
+  \texttt{trg\_contract\_ins} &
+  Counts rows in Contract where \texttt{contract\_type='Permanent'},
+  \texttt{club\_id}$\neq$ new club, \texttt{start}$\leq$ new start,
+  \texttt{end}$\geq$ new end. Reject if 0. \\
+
+C2 --- 120-minute gap between matches sharing stadium/club/ref &
+  \texttt{trg\_match\_ins} &
+  Scans existing Matches with overlapping predicate and
+  \texttt{ABS(TIMESTAMPDIFF(MINUTE, \dots)) < 120}. Reject if any. \\
+
+C3 --- Attendance $\leq$ stadium capacity &
+  \texttt{trg\_match\_ins}, \texttt{trg\_match\_upd} &
+  Joins to Stadium, compares capacity. Fires on insert and on any
+  later update of attendance. \\
+
+C4a --- $\leq$ 11 starters per club per match &
+  \texttt{trg\_match\_stats\_ins} &
+  Counts current starters for this (match, club) before allowing a
+  new starter row. \\
+
+C4b --- $\leq$ 23 total players per club per match &
+  \texttt{trg\_match\_stats\_ins} &
+  Similar count on the whole squad. \\
+
+C4c --- $\geq$ 11 players per club at result time &
+  \texttt{trg\_match\_upd} &
+  When \texttt{home\_goals} transitions \texttt{NULL} $\to$ set, counts
+  both sides; rejects if either has fewer than 11 squad members. \\
+
+C5a --- Red card $\Rightarrow$ next-match suspension &
+  \texttt{sp\_submit\_match\_result} &
+  After updating Match, inserts into \texttt{Suspension} for every
+  player with \texttt{red\_cards=1}. \\
+
+C5b --- 5 yellow cards in a competition $\Rightarrow$ 1-match ban
+  (count resets after ban, per forum \#4) &
+  \texttt{sp\_submit\_match\_result} &
+  Sums \texttt{yellow\_cards} for each player since the max
+  \texttt{served\_match\_ID} datetime for that player in that
+  competition; if $\geq 5$, creates a \texttt{5-yellow} Suspension
+  (or upgrades an existing \texttt{red} entry to \texttt{combined}). \\
+
+C5c --- Suspended players cannot appear in the next match's squad &
+  \texttt{trg\_match\_stats\_ins} &
+  Rejects insert if a \texttt{pending} Suspension exists for this
+  (player, competition) triggered by an earlier match. \\
+
+C5d --- Serving a ban consumes it and resets the yellow window
+  (forum \#4) &
+  \texttt{sp\_submit\_match\_result} &
+  After the match is played, marks pending suspensions for
+  players-of-this-match's-clubs as \texttt{served} when the player was
+  not in the squad. The 5-yellow subquery then re-counts only yellows
+  whose match datetime exceeds the last served suspension. \\
+
+C6a --- Free transfer fee $= 0$ &
+  \texttt{CHECK} &
+  Direct \texttt{CHECK} constraint. \\
+
+C6b --- Loan transfer \texttt{from\_club} equals parent's Permanent
+  club &
+  \texttt{trg\_transfer\_ins} &
+  Resolves the player's active Permanent club at transfer date; reject
+  if \texttt{from\_club\_id} differs. \\
+
+C7a --- Player's \texttt{club\_id} must match home or away of the
+  match &
+  \texttt{trg\_match\_stats\_ins} &
+  Compares against Match row. \\
+
+C7b --- Loan player cannot appear for parent club &
+  \texttt{trg\_match\_stats\_ins} &
+  If player has an active Loan, resolves parent Permanent club and
+  rejects if the new row's \texttt{club\_id} equals the parent. \\
+
+C8 --- Club city = Stadium city &
+  \texttt{trg\_club\_city\_ins}, \texttt{trg\_club\_city\_upd} &
+  Reads Stadium.city and compares to the incoming Club.city. \\
+
+C9 --- No overlapping active contracts of the same type &
+  \texttt{trg\_contract\_ins} &
+  Strict date-range overlap check per player + type. \\
+
+Future-dated match scheduling &
+  \texttt{trg\_match\_ins} &
+  \texttt{NEW.match\_datetime > NOW()}. \\
+
+Only assigned referee may submit results &
+  \texttt{trg\_match\_upd} &
+  Checks MySQL session variables \texttt{@current\_user\_id} and
+  \texttt{@current\_user\_role}, which the Flask app sets on every
+  connection after login. Direct MySQL-client writes (no session vars)
+  are rejected. \\
+
+Match results only after scheduled time &
+  \texttt{trg\_match\_upd} &
+  Refuses the \texttt{NULL} $\to$ filled transition when
+  \texttt{match\_datetime > NOW()}. \\
+
+At most one active Permanent per player + auto-termination &
+  \texttt{trg\_contract\_ins} + \texttt{sp\_register\_transfer} &
+  Trigger forbids a second active Permanent; the procedure terminates
+  the old Permanent (setting \texttt{end\_date} to today) before
+  writing the new one. \\
+
+Purchase transfer updates \texttt{Player.market\_value} &
+  \texttt{sp\_register\_transfer} &
+  After writing the Transfer\_Record and Contract, sets
+  \texttt{market\_value = transfer\_fee}. \\
+
+\bottomrule
+\end{longtable}
+
+\subsection{Password and SQL-injection safeguards (application layer)}
+
+Per spec \S 4, password hashing (bcrypt), password policy validation
+(length/complexity), and parameterized queries are handled in the
+Python application layer, not in the database. All DB writes go through
+\texttt{mysql-connector}'s \texttt{\%s} placeholders, never through
+string concatenation.
+
+\section{Forum Clarifications Applied}
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{\#1 (Competition type strict enum):}
+    \texttt{competition\_type} is an \texttt{ENUM} of three values; the
+    DB Manager ``create competition'' form only exposes these three
+    options.
+  \item \textbf{\#2 (FD listing):} Only FDs derived from explicit rules
+    are listed, including the \texttt{(stadium\_id, match\_datetime)}
+    family that is forced into existence by the 120-min rule.
+  \item \textbf{\#3 (No suspension carry-over across seasons):}
+    Suspensions are keyed by \texttt{competition\_ID}, which uniquely
+    identifies a (name, season) pair; queries never unify across
+    seasons.
+  \item \textbf{\#4 (Red $+$ 5-yellow concurrent = 1-match ban; yellow
+    count resets after a served ban):} the 5-yellow subquery in
+    \texttt{sp\_submit\_match\_result} windows yellows strictly after
+    the player's last \texttt{served} Suspension in the same
+    competition, so the same missed match extinguishes both stacked
+    penalties and zeroes the counter.
+\end{itemize}
+
+\section{Summary}
+
+Every relation in the refined schema is in 3NF, and 12 of 13 are in
+BCNF. Club is kept in 3NF by choice: the sole BCNF-violating dependency
+(\texttt{stadium\_ID} $\to$ \texttt{city}) is controlled by triggers so
+that the redundancy it introduces is always consistent with Stadium,
+and decomposing would shift the enforcement burden without a real
+integrity benefit. All business rules not expressible by
+\texttt{CHECK} are implemented as triggers or stored procedures, giving
+the database independent authority over data integrity as required by
+the project specification.
+
+\end{document}

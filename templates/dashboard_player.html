@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}Oyuncu Paneli{% endblock %}
+{% block body %}
+<h2>Hos geldin, {{ username }}!</h2>
+<p>Ust menuden profilini, performansini, mac gecmisini ve kariyerini gorebilirsin.</p>
+<ul>
+  <li><a href="{{ url_for('player_profile') }}">Profil detaylari</a></li>
+  <li><a href="{{ url_for('player_performance') }}">Performans istatistikleri</a></li>
+  <li><a href="{{ url_for('player_matches') }}">Mac gecmisi</a></li>
+  <li><a href="{{ url_for('player_career') }}">Kariyer (kontrat + transfer)</a></li>
+</ul>
+{% endblock %}

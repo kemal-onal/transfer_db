@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}Kadro Istatistikleri{% endblock %}
+{% block body %}
+<h2>Kadro Istatistikleri — {{ club.club_name }}</h2>
+<form method="GET">
+  <label>Sezon:</label>
+  <select name="season">
+    <option value="">(mevcut kadro)</option>
+    {% for s in seasons %}<option value="{{ s }}" {% if s==sel_season %}selected{% endif %}>{{ s }}</option>{% endfor %}
+  </select>
+  <label>Competition:</label>
+  <select name="competition_id">
+    <option value="">(hepsi)</option>
+    {% for c in comps %}<option value="{{ c.competition_ID }}" {% if c.competition_ID|string==sel_comp %}selected{% endif %}>{{ c.name }} ({{ c.season }})</option>{% endfor %}
+  </select>
+  <button type="submit">Filtrele</button>
+  <a href="{{ url_for('manager_squad_stats') }}">Mevcut kadro</a>
+</form>
+<p><em>Bos filtre = mevcut aktif kadronun bu kulup ile tum zaman toplami. Filtre = tarihsel secim.</em></p>
+<table>
+  <tr><th>Oyuncu</th><th>Yas</th><th>Pozisyon</th><th>Ayak</th><th>Boy</th>
+      <th>Piyasa</th><th>Uyruk</th>
+      <th>Oynanan</th><th>G</th><th>A</th><th>Y</th><th>R</th>
+      <th>Ort.Rating</th><th>Ort.Dk</th></tr>
+  {% for p in stats %}
+  <tr>
+    <td>{{ p.name }} {{ p.surname }}</td>
+    <td>{{ p.age }}</td><td>{{ p.main_position }}</td>
+    <td>{{ p.strong_foot }}</td><td>{{ p.height }}</td>
+    <td>{{ p.market_value }}</td><td>{{ p.nationality }}</td>
+    <td>{{ p.games }}</td><td>{{ p.goals }}</td><td>{{ p.assists }}</td>
+    <td>{{ p.yellows }}</td><td>{{ p.reds }}</td>
+    <td>{{ '%.2f' % (p.avg_rating or 0) }}</td>
+    <td>{{ '%.1f' % (p.avg_min or 0) }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

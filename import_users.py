@@ -1,136 +1,203 @@
+"""Seed the transferdb database from initial_data.xlsx.
+
+Loads all eleven sheets in FK-safe order with @DISABLE_TRIGGERS = 1 so
+the intentionally-invalid historical records described in spec §2.3 can
+be inserted without tripping validation triggers.
+"""
+import os
 import pandas as pd
 import bcrypt
 import mysql.connector
+from datetime import datetime
 
-def get_db_connection():
+
+def conn():
     return mysql.connector.connect(
-        host='db',
-        user='root',
-        password='password',
-        database='transferdb'
+        host=os.environ.get('DB_HOST', 'db'),
+        port=int(os.environ.get('DB_PORT', '3306')),
+        user=os.environ.get('DB_USER', 'root'),
+        password=os.environ.get('DB_PASS', 'password'),
+        database=os.environ.get('DB_NAME', 'transferdb'),
     )
 
-def hash_password(plain_text_password):
-    return bcrypt.hashpw(str(plain_text_password).encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
-conn = get_db_connection()
-cursor = conn.cursor()
+def hash_pw(pw):
+    return bcrypt.hashpw(str(pw).encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
-try:
-    print("Excel dosyası okunuyor... (Bu işlem birkaç saniye sürebilir)")
+
+def df(xls, sheet):
+    d = pd.read_excel(xls, sheet)
+    # Coerce NaN / NaT to actual None so mysql-connector binds NULL
+    return d.astype(object).where(d.notna(), None)
+
+
+def main():
     xls = pd.ExcelFile('initial_data.xlsx')
+    c = conn(); cur = c.cursor()
+    # Turn off triggers + FK checks during bulk load
+    cur.execute("SET @DISABLE_TRIGGERS = 1")
+    cur.execute("SET FOREIGN_KEY_CHECKS = 0")
 
-    # 1. DB MANAGERS
-    print("1/11 - DB Managerlar ekleniyor...")
-    df_db = pd.read_excel(xls, 'DB Managers').where(pd.notna, None)
-    for _, row in df_db.iterrows():
-        try:
-            cursor.execute("INSERT IGNORE INTO DB_Manager (username, password) VALUES (%s, %s)",
-                           (row['username'], hash_password(row['password'])))
-        except Exception as e: print(f"  Uyarı (DB_Manager): {e}")
+    try:
+        # ---- Stadiums ----
+        print("Stadiums...")
+        for _, r in df(xls, 'Stadiums').iterrows():
+            cur.execute(
+                "INSERT IGNORE INTO Stadium (stadium_ID, stadium_name, city, capacity) "
+                "VALUES (%s, %s, %s, %s)",
+                (r['stadium_id'], r['stadium_name'], r['city'], r['capacity'])
+            )
 
-    # 2. STADIUMS
-    print("2/11 - Stadyumlar ekleniyor...")
-    df_stad = pd.read_excel(xls, 'Stadiums').where(pd.notna, None)
-    for _, row in df_stad.iterrows():
-        try:
-            cursor.execute("INSERT IGNORE INTO Stadium (stadium_ID, stadium_name, city, capacity) VALUES (%s, %s, %s, %s)",
-                           (row['stadium_id'], row['stadium_name'], row['city'], row['capacity']))
-        except Exception as e: print(f"  Uyarı (Stadium): {e}")
+        # ---- DB Managers ----
+        print("DB Managers...")
+        for _, r in df(xls, 'DB Managers').iterrows():
+            cur.execute(
+                "INSERT IGNORE INTO DB_Manager (username, password) VALUES (%s, %s)",
+                (r['username'], hash_pw(r['password']))
+            )
 
-    # 3. MANAGERS
-    print("3/11 - Teknik Direktörler ekleniyor...")
-    df_man = pd.read_excel(xls, 'Managers').where(pd.notna, None)
-    for _, row in df_man.iterrows():
-        try:
-            cursor.execute("INSERT IGNORE INTO Person (person_ID, name, surname, nationality, date_of_birth) VALUES (%s, %s, %s, %s, %s)",
-                           (row['manager_id'], row['name'], row['surname'], row['nationality'], row['date_of_birth']))
-            cursor.execute("INSERT IGNORE INTO Manager (person_ID, username, password, preferred_formation, experience_level) VALUES (%s, %s, %s, %s, %s)",
-                           (row['manager_id'], row['username'], hash_password(row['password']), row['preferred_formation'], row['experience_level']))
-        except Exception as e: print(f"  Uyarı (Manager): {e}")
+        # ---- Persons + Managers ----
+        print("Managers...")
+        for _, r in df(xls, 'Managers').iterrows():
+            cur.execute(
+                "INSERT IGNORE INTO Person (person_ID, name, surname, nationality, date_of_birth) "
+                "VALUES (%s, %s, %s, %s, %s)",
+                (r['manager_id'], r['name'], r['surname'], r['nationality'], r['date_of_birth'])
+            )
+            cur.execute(
+                "INSERT IGNORE INTO Manager (person_ID, username, password, "
+                "preferred_formation, experience_level) VALUES (%s, %s, %s, %s, %s)",
+                (r['manager_id'], r['username'], hash_pw(r['password']),
+                 r['preferred_formation'], r['experience_level'])
+            )
 
-    # 4. REFEREES
-    print("4/11 - Hakemler ekleniyor...")
-    df_ref = pd.read_excel(xls, 'Referees').where(pd.notna, None)
-    for _, row in df_ref.iterrows():
-        try:
-            cursor.execute("INSERT IGNORE INTO Person (person_ID, name, surname, nationality, date_of_birth) VALUES (%s, %s, %s, %s, %s)",
-                           (row['referee_id'], row['name'], row['surname'], row['nationality'], row['date_of_birth']))
-            cursor.execute("INSERT IGNORE INTO Referee (person_ID, username, password, license_level, years_of_experience) VALUES (%s, %s, %s, %s, %s)",
-                           (row['referee_id'], row['username'], hash_password(row['password']), row['license_level'], row['years_of_experience']))
-        except Exception as e: print(f"  Uyarı (Referee): {e}")
+        # ---- Persons + Referees ----
+        print("Referees...")
+        for _, r in df(xls, 'Referees').iterrows():
+            cur.execute(
+                "INSERT IGNORE INTO Person (person_ID, name, surname, nationality, date_of_birth) "
+                "VALUES (%s, %s, %s, %s, %s)",
+                (r['referee_id'], r['name'], r['surname'], r['nationality'], r['date_of_birth'])
+            )
+            cur.execute(
+                "INSERT IGNORE INTO Referee (person_ID, username, password, "
+                "license_level, years_of_experience) VALUES (%s, %s, %s, %s, %s)",
+                (r['referee_id'], r['username'], hash_pw(r['password']),
+                 r['license_level'], r['years_of_experience'])
+            )
 
-    # 5. PLAYERS
-    print("5/11 - Oyuncular ekleniyor...")
-    df_play = pd.read_excel(xls, 'Players').where(pd.notna, None)
-    for _, row in df_play.iterrows():
-        try:
-            cursor.execute("INSERT IGNORE INTO Person (person_ID, name, surname, nationality, date_of_birth) VALUES (%s, %s, %s, %s, %s)",
-                           (row['player_id'], row['name'], row['surname'], row['nationality'], row['date_of_birth']))
-            cursor.execute("INSERT IGNORE INTO Player (person_ID, username, password, market_value, main_position, strong_foot, height) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-                           (row['player_id'], row['username'], hash_password(row['password']), row['market_value'], row['main_position'], row['strong_foot'], row['height']))
-        except Exception as e: print(f"  Uyarı (Player): {e}")
+        # ---- Persons + Players ----
+        print("Players...")
+        for _, r in df(xls, 'Players').iterrows():
+            cur.execute(
+                "INSERT IGNORE INTO Person (person_ID, name, surname, nationality, date_of_birth) "
+                "VALUES (%s, %s, %s, %s, %s)",
+                (r['player_id'], r['name'], r['surname'], r['nationality'], r['date_of_birth'])
+            )
+            cur.execute(
+                "INSERT IGNORE INTO Player (person_ID, username, password, market_value, "
+                "main_position, strong_foot, height) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                (r['player_id'], r['username'], hash_pw(r['password']),
+                 r['market_value'], r['main_position'], r['strong_foot'], r['height'])
+            )
 
-    # 6. CLUBS
-    print("6/11 - Kulüpler ekleniyor...")
-    df_club = pd.read_excel(xls, 'Clubs').where(pd.notna, None)
-    for _, row in df_club.iterrows():
-        try:
-            cursor.execute("INSERT IGNORE INTO Club (club_ID, club_name, stadium_ID, foundation_year, manager_ID) VALUES (%s, %s, %s, %s, %s)",
-                           (row['club_id'], row['club_name'], row['stadium_id'], row['foundation_year'], row['manager_id']))
-        except Exception as e: print(f"  Uyarı (Club - {row['club_name']}): {e}")
+        # ---- Clubs (city derived from stadium; skip rows with no stadium) ----
+        print("Clubs...")
+        skipped = 0
+        for _, r in df(xls, 'Clubs').iterrows():
+            if r['stadium_id'] is None:
+                skipped += 1
+                continue
+            cur.execute("SELECT city FROM Stadium WHERE stadium_ID = %s",
+                        (int(r['stadium_id']),))
+            row = cur.fetchone()
+            club_city = row[0] if row else 'Unknown'
+            cur.execute(
+                "INSERT IGNORE INTO Club (club_ID, club_name, stadium_ID, city, "
+                "foundation_year, manager_ID) VALUES (%s, %s, %s, %s, %s, %s)",
+                (r['club_id'], r['club_name'], int(r['stadium_id']), club_city,
+                 r['foundation_year'],
+                 int(r['manager_id']) if r['manager_id'] is not None else None)
+            )
+        if skipped:
+            print(f"  (stadyumsuz {skipped} kulup atlandi)")
 
-    # 7. CONTRACTS
-    print("7/11 - Sözleşmeler ekleniyor...")
-    df_con = pd.read_excel(xls, 'Contracts').where(pd.notna, None)
-    for _, row in df_con.iterrows():
-        try:
-            cursor.execute("INSERT IGNORE INTO Contract (contract_id, player_id, club_id, start_date, end_date, weekly_wage, contract_type) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-                           (row['contract_id'], row['player_id'], row['club_id'], row['start_date'], row['end_date'], row['weekly_wage'], row['contract_type']))
-        except Exception as e: print(f"  Trigger Uyarı (Contract ID {row['contract_id']}): {e}")
+        # ---- Competitions ----
+        print("Competitions...")
+        for _, r in df(xls, 'Competitions').iterrows():
+            cur.execute(
+                "INSERT IGNORE INTO Competition (competition_ID, name, season, country, "
+                "competition_type) VALUES (%s, %s, %s, %s, %s)",
+                (r['competition_id'], r['name'], r['season'], r['country'], r['competition_type'])
+            )
 
-    # 8. TRANSFERS
-    print("8/11 - Transfer Geçmişi ekleniyor...")
-    df_trans = pd.read_excel(xls, 'Transfer Records').where(pd.notna, None)
-    for _, row in df_trans.iterrows():
-        try:
-            cursor.execute("INSERT IGNORE INTO Transfer (transfer_id, player_id, from_club_id, to_club_id, transfer_date, transfer_fee, transfer_type) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-                           (row['transfer_id'], row['player_id'], row['from_club_id'], row['to_club_id'], row['transfer_date'], row['transfer_fee'], row['transfer_type']))
-        except Exception as e: print(f"  Trigger Uyarı (Transfer ID {row['transfer_id']}): {e}")
+        # ---- Contracts ----
+        print("Contracts...")
+        for _, r in df(xls, 'Contracts').iterrows():
+            cur.execute(
+                "INSERT IGNORE INTO Contract (contract_id, player_id, club_id, start_date, "
+                "end_date, weekly_wage, contract_type) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                (r['contract_id'], r['player_id'], r['club_id'], r['start_date'],
+                 r['end_date'], r['weekly_wage'], r['contract_type'])
+            )
 
-    # 9. COMPETITIONS
-    print("9/11 - Turnuvalar ekleniyor...")
-    df_comp = pd.read_excel(xls, 'Competitions').where(pd.notna, None)
-    for _, row in df_comp.iterrows():
-        try:
-            cursor.execute("INSERT IGNORE INTO Competition (competition_ID, name, season, country, competition_type) VALUES (%s, %s, %s, %s, %s)",
-                           (row['competition_id'], row['name'], row['season'], row['country'], row['competition_type']))
-        except Exception as e: print(f"  Uyarı (Competition): {e}")
+        # ---- Matches (combine match_date + match_time into datetime) ----
+        print("Matches...")
+        for _, r in df(xls, 'Matches').iterrows():
+            md = r['match_date']
+            mt = r['match_time']
+            # Pandas gives Timestamp for date, timedelta for time
+            if hasattr(md, 'date'): md_part = md.date()
+            else: md_part = md
+            if hasattr(mt, 'total_seconds'):
+                secs = int(mt.total_seconds())
+                mt_part = f"{secs//3600:02d}:{(secs%3600)//60:02d}:{secs%60:02d}"
+            else:
+                mt_part = str(mt)
+            match_dt = f"{md_part} {mt_part}"
+            cur.execute(
+                "INSERT IGNORE INTO `Match` (match_ID, competition_ID, home_club_ID, "
+                "away_club_ID, stadium_ID, referee_ID, match_datetime, attendance, "
+                "home_goals, away_goals) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                (r['match_id'], r['competition_id'], r['home_club_id'], r['away_club_id'],
+                 r['stadium_id'], r['referee_id'], match_dt, r['attendance'],
+                 r['home_goals'], r['away_goals'])
+            )
 
-    # 10. MATCHES
-    print("10/11 - Maçlar ekleniyor...")
-    df_match = pd.read_excel(xls, 'Matches').where(pd.notna, None)
-    for _, row in df_match.iterrows():
-        try:
-            cursor.execute("INSERT IGNORE INTO `Match` (match_ID, competition_ID, home_club_ID, away_club_ID, stadium_ID, referee_ID, match_date, match_time, attendance, home_goals, away_goals) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                           (row['match_id'], row['competition_id'], row['home_club_id'], row['away_club_id'], row['stadium_id'], row['referee_id'], row['match_date'], row['match_time'], row['attendance'], row['home_goals'], row['away_goals']))
-        except Exception as e: print(f"  Trigger Uyarı (Match ID {row['match_id']}): {e}")
+        # ---- Match Stats ----
+        print("Match Stats...")
+        for _, r in df(xls, 'Match Stats').iterrows():
+            cur.execute(
+                "INSERT IGNORE INTO Match_Stats (match_ID, player_id, club_id, is_starter, "
+                "minutes_played, position_played, goals, assists, yellow_cards, red_cards, "
+                "rating) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                (r['match_id'], r['player_id'], r['club_id'], bool(r['is_starter']),
+                 r['minutes_played'], r['position_played'], r['goals'], r['assists'],
+                 r['yellow_cards'], r['red_cards'], r['rating'])
+            )
 
-    # 11. MATCH STATS
-    print("11/11 - Maç İstatistikleri ekleniyor...")
-    df_ms = pd.read_excel(xls, 'Match Stats').where(pd.notna, None)
-    for _, row in df_ms.iterrows():
-        try:
-            is_starter = 1 if row['is_starter'] in [True, 'True', 1, '1'] else 0
-            cursor.execute("INSERT IGNORE INTO Match_Stats (match_ID, player_id, club_id, is_starter, minutes_played, position_played, goals, assists, yellow_cards, red_cards, rating) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                           (row['match_id'], row['player_id'], row['club_id'], is_starter, row['minutes_played'], row['position_played'], row['goals'], row['assists'], row['yellow_cards'], row['red_cards'], row['rating']))
-        except Exception as e: print(f"  Trigger Uyarı (Match Stats): {e}")
+        # ---- Transfer Records ----
+        print("Transfer Records...")
+        for _, r in df(xls, 'Transfer Records').iterrows():
+            cur.execute(
+                "INSERT IGNORE INTO Transfer_Record (transfer_id, player_id, from_club_id, "
+                "to_club_id, transfer_date, transfer_fee, transfer_type) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                (r['transfer_id'], r['player_id'], r['from_club_id'], r['to_club_id'],
+                 r['transfer_date'], r['transfer_fee'], r['transfer_type'])
+            )
 
-    conn.commit()
-    print("\n✅ İŞLEM TAMAM! Sağlam veriler yüklendi. Hatalı Excel satırları yukarıda uyarı olarak listelendi.")
+        c.commit()
+        print("Tum baslangic verileri yuklendi.")
+    except Exception as e:
+        c.rollback()
+        print(f"HATA: {e}")
+        raise
+    finally:
+        cur.execute("SET @DISABLE_TRIGGERS = 0")
+        cur.execute("SET FOREIGN_KEY_CHECKS = 1")
+        cur.close(); c.close()
 
-except Exception as e:
-    print(f"❌ BEKLENMEYEN BİR DIŞ HATA OLUŞTU: {e}")
-finally:
-    cursor.close()
-    conn.close()
+
+if __name__ == '__main__':
+    main()

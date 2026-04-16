@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}Mac Gecmisi{% endblock %}
+{% block body %}
+<h2>Yonettigim Maclar</h2>
+<table>
+  <tr><th>Tarih</th><th>Competition</th><th>Stadyum</th>
+      <th>Ev</th><th>Deplasman</th><th>Sonuc</th>
+      <th>Seyirci</th><th>Toplam Sari</th><th>Toplam Kirmizi</th></tr>
+  {% for r in rows %}
+  <tr>
+    <td>{{ r.match_datetime }}</td>
+    <td>{{ r.comp_name }} ({{ r.season }})</td>
+    <td>{{ r.stadium_name }}</td>
+    <td>{{ r.home_name }}</td><td>{{ r.away_name }}</td>
+    <td>{% if r.home_goals is none %}Scheduled{% else %}{{ r.home_goals }}-{{ r.away_goals }}{% endif %}</td>
+    <td>{{ r.attendance or '-' }}</td>
+    <td>{{ r.yellows }}</td><td>{{ r.reds }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

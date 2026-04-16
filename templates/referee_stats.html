@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}Hakem Istatistikleri{% endblock %}
+{% block body %}
+<h2>Hakem Istatistiklerim</h2>
+<table>
+  <tr><th>Yonetilen mac</th><td>{{ stats.matches_officiated }}</td></tr>
+  <tr><th>Toplam sari kart</th><td>{{ stats.total_yellows }}</td></tr>
+  <tr><th>Toplam kirmizi kart</th><td>{{ stats.total_reds }}</td></tr>
+</table>
+{% endblock %}

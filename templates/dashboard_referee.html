@@ -1,29 +1,14 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Hakem Paneli</title>
-</head>
-<body>
-    <h1>Hoş Geldin, Hakem {{ username }}</h1>
-    
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}<div style="color: red; font-weight: bold;">{{ messages[0] }}</div>{% endif %}
-    {% endwith %}
-
-    <h2>Atandığın Yaklaşan Maçlar</h2>
-    {% if matches %}
-        {% for match in matches %}
-        <div style="border: 1px solid black; padding: 10px; margin-bottom: 10px;">
-            <p><strong>{{ match.comp_name }}</strong></p>
-            <p>{{ match.home_name }} vs {{ match.away_name }}</p>
-            <p>Tarih: {{ match.match_date }} Saat: {{ match.match_time }}</p>
-            <a href="/enter_stats/{{ match.match_ID }}"><button>Maç İstatistiklerini Gir</button></a>
-        </div>
-        {% endfor %}
-    {% else %}
-        <p>Şu an skorunu girmeniz gereken bekleyen bir maçınız bulunmuyor.</p>
-    {% endif %}
-
-    <br><a href="/logout">Çıkış Yap</a>
-</body>
-</html>
+{% extends 'base.html' %}
+{% block title %}Hakem Paneli{% endblock %}
+{% block body %}
+<h2>Hos geldin, Hakem {{ username }}</h2>
+<h3>Atandigin Yaklasan Maclar</h3>
+{% if not matches %}<p>Bekleyen mac yok.</p>{% endif %}
+{% for m in matches %}
+<div style="border:1px solid #888; padding:10px; margin-bottom:10px;">
+  <p><strong>{{ m.comp_name }}</strong></p>
+  <p>{{ m.home_name }} vs {{ m.away_name }} — {{ m.match_datetime }}</p>
+  <a href="{{ url_for('enter_stats', match_id=m.match_ID) }}"><button>Mac Istatistiklerini Gir</button></a>
+</div>
+{% endfor %}
+{% endblock %}

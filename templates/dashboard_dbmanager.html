@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}DB Manager Paneli{% endblock %}
+{% block body %}
+<h2>Hos geldin, {{ username }}</h2>
+<p>Veritabani yoneticisi islemleri:</p>
+<ul>
+  <li><a href="{{ url_for('db_stadiums') }}">Stadyumlar (goruntule/ekle/isim degistir)</a></li>
+  <li><a href="{{ url_for('db_clubs') }}">Kulupler + Menajer atamasi</a></li>
+  <li><a href="{{ url_for('db_matches') }}">Mac planlama</a></li>
+  <li><a href="{{ url_for('db_competitions') }}">Competition olusturma</a></li>
+  <li><a href="{{ url_for('db_transfer') }}">Transfer + Kontrat kaydi</a></li>
+</ul>
+{% endblock %}

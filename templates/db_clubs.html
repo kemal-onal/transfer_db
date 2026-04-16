@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Kulupler{% endblock %}
+{% block body %}
+<h2>Kulupler ve Menajer Atamalari</h2>
+<table>
+  <tr><th>Kulup</th><th>Sehir</th><th>Stadyum</th><th>Kurulus</th>
+      <th>Mevcut Menajer</th><th>Menajer ata/degistir</th></tr>
+  {% for c in clubs %}
+  <tr>
+    <td>{{ c.club_name }}</td><td>{{ c.city }}</td>
+    <td>{{ c.stadium_name }} ({{ c.stadium_city }})</td>
+    <td>{{ c.foundation_year }}</td>
+    <td>{{ (c.mgr_name ~ ' ' ~ c.mgr_surname) if c.mgr_name else '-' }}</td>
+    <td>
+      <form class="inline" method="POST">
+        <input type="hidden" name="action" value="reassign">
+        <input type="hidden" name="club_id" value="{{ c.club_ID }}">
+        <select name="manager_id">
+          <option value="">(bosalt)</option>
+          {% for m in managers %}
+            <option value="{{ m.person_ID }}">
+              {{ m.name }} {{ m.surname }}
+              {% if m.current_club %}[{{ m.current_club }}]{% endif %}
+            </option>
+          {% endfor %}
+        </select>
+        <button>Kaydet</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+
+<h3>Yeni Kulup Ekle</h3>
+<form method="POST">
+  <input type="hidden" name="action" value="add">
+  <div class="kv">
+    <label>Ad:</label><input name="club_name" required>
+    <label>Sehir:</label><input name="city" required>
+    <label>Stadyum:</label>
+    <select name="stadium_id" required>
+      {% for s in stadiums %}<option value="{{ s.stadium_ID }}">{{ s.stadium_name }} ({{ s.city }})</option>{% endfor %}
+    </select>
+    <label>Kurulus yili:</label><input type="number" name="foundation_year" required>
+    <label>Menajer (opsiyonel):</label>
+    <select name="manager_id">
+      <option value="">-</option>
+      {% for m in managers %}<option value="{{ m.person_ID }}">{{ m.name }} {{ m.surname }}</option>{% endfor %}
+    </select>
+  </div>
+  <br><button>Ekle</button>
+</form>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Stadyumlar{% endblock %}
+{% block body %}
+<h2>Stadyumlar</h2>
+<table>
+  <tr><th>Ad</th><th>Sehir</th><th>Kapasite</th><th>Ev sahibi kulup(ler)</th><th>Ad degistir</th></tr>
+  {% for s in rows %}
+  <tr>
+    <td>{{ s.stadium_name }}</td><td>{{ s.city }}</td><td>{{ s.capacity }}</td>
+    <td>{{ s.clubs or '-' }}</td>
+    <td>
+      <form class="inline" method="POST">
+        <input type="hidden" name="action" value="rename">
+        <input type="hidden" name="stadium_id" value="{{ s.stadium_ID }}">
+        <input name="new_name" placeholder="yeni ad" required>
+        <button>Kaydet</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+
+<h3>Yeni Stadyum Ekle</h3>
+<form method="POST">
+  <input type="hidden" name="action" value="add">
+  <div class="kv">
+    <label>Ad:</label><input name="stadium_name" required>
+    <label>Sehir:</label><input name="city" required>
+    <label>Kapasite:</label><input type="number" name="capacity" min="1" required>
+  </div>
+  <br><button>Ekle</button>
+</form>
+{% endblock %}

@@ -1,51 +1,36 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Maç İstatistikleri Girişi</title>
-    <style>
-        input[type="number"] { width: 50px; }
-        table { border-collapse: collapse; width: 100%; margin-bottom: 20px;}
-        th, td { border: 1px solid black; padding: 5px; text-align: center;}
-    </style>
-</head>
-<body>
-    <h2>{{ match.home_name }} vs {{ match.away_name }} - İstatistik Girişi</h2>
+{% extends 'base.html' %}
+{% block title %}Mac Sonucu{% endblock %}
+{% block body %}
+<h2>Mac Sonucu Giris</h2>
+<p><strong>{{ match.home_name }} vs {{ match.away_name }}</strong> — {{ match.match_datetime }}</p>
+<form method="POST" action="{{ url_for('save_stats') }}">
+  <input type="hidden" name="match_id" value="{{ match.match_ID }}">
+  <div class="kv">
+    <label>Ev sahibi gol:</label><input type="number" name="home_goals" min="0" required>
+    <label>Deplasman gol:</label><input type="number" name="away_goals" min="0" required>
+    <label>Seyirci:</label><input type="number" name="attendance" min="0" required>
+  </div>
 
-    <form action="/save_stats" method="POST">
-        <input type="hidden" name="match_id" value="{{ match.match_ID }}">
-        
-        <h3>Genel Maç Bilgileri</h3>
-        <label>Ev Sahibi Golü: <input type="number" name="home_goals" required min="0"></label> | 
-        <label>Deplasman Golü: <input type="number" name="away_goals" required min="0"></label> | 
-        <label>Seyirci Sayısı: <input type="number" name="attendance" required min="0"></label>
-        
-        <h3>Oyuncu İstatistikleri</h3>
-        <table>
-            <tr>
-                <th>Takım</th><th>Oyuncu</th><th>11'de mi?</th>
-                <th>Oynadığı Dk</th><th>Gol</th><th>Asist</th>
-                <th>Sarı K.</th><th>Kırmızı K.</th><th>Reyting (1-10)</th>
-            </tr>
-            {% for player in players %}
-            <tr>
-                <input type="hidden" name="player_id" value="{{ player.player_id }}">
-                
-                <td>{{ player.club_name }}</td>
-                <td>{{ player.name }} {{ player.surname }}</td>
-                <td>{{ 'Evet' if player.is_starter else 'Hayır' }}</td>
-                <td><input type="number" name="minutes_{{ player.player_id }}" value="0" min="0" max="120"></td>
-                <td><input type="number" name="goals_{{ player.player_id }}" value="0" min="0"></td>
-                <td><input type="number" name="assists_{{ player.player_id }}" value="0" min="0"></td>
-                <td><input type="number" name="yellow_{{ player.player_id }}" value="0" min="0" max="2"></td>
-                <td><input type="number" name="red_{{ player.player_id }}" value="0" min="0" max="1"></td>
-                <td><input type="number" name="rating_{{ player.player_id }}" value="6.0" step="0.1" min="1.0" max="10.0"></td>
-            </tr>
-            {% endfor %}
-        </table>
-        
-        <button type="submit" style="padding: 10px 20px; font-size: 16px;">İstatistikleri Kaydet ve Maçı Bitir</button>
-    </form>
-    
-    <br><a href="/dashboard">İptal ve Geri Dön</a>
-</body>
-</html>
+  <h3>Oyuncu Istatistikleri</h3>
+  <table>
+    <tr><th>Oyuncu</th><th>Kulup</th><th>Ilk11</th>
+        <th>Dk</th><th>Pozisyon</th><th>G</th><th>A</th>
+        <th>Sari</th><th>Kirmizi</th><th>Rating</th></tr>
+    {% for pl in players %}
+    <tr>
+      <td>{{ pl.name }} {{ pl.surname }}<input type="hidden" name="player_id" value="{{ pl.player_id }}"></td>
+      <td>{{ pl.club_name }}</td>
+      <td>{{ 'Evet' if pl.is_starter else '-' }}</td>
+      <td><input type="number" name="minutes_{{ pl.player_id }}" min="0" max="120" value="0"></td>
+      <td><input name="position_{{ pl.player_id }}" value="{{ pl.position_played }}"></td>
+      <td><input type="number" name="goals_{{ pl.player_id }}" min="0" value="0"></td>
+      <td><input type="number" name="assists_{{ pl.player_id }}" min="0" value="0"></td>
+      <td><input type="number" name="yellow_{{ pl.player_id }}" min="0" max="2" value="0"></td>
+      <td><input type="number" name="red_{{ pl.player_id }}" min="0" max="1" value="0"></td>
+      <td><input type="number" name="rating_{{ pl.player_id }}" min="1" max="10" step="0.1"></td>
+    </tr>
+    {% endfor %}
+  </table>
+  <br><button type="submit">Kaydet</button>
+</form>
+{% endblock %}

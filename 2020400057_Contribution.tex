@@ -1,0 +1,89 @@
+\documentclass[12pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{times}
+\usepackage{setspace}
+\usepackage{enumitem}
+\onehalfspacing
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+
+\begin{document}
+
+\begin{center}
+\textbf{\large Individual Contribution Report --- Project 2}\\[4pt]
+TransferDB Application --- CMPE 321, Spring 2026
+\end{center}
+
+\vspace{2pt}
+
+\textbf{Personal Information.}
+Name: Ahmet Akda\u{g} \quad Student ID: 2020400057 \quad Group Number: 01
+
+\textbf{Tasks \& Contributions.}
+I owned the backend implementation of the TransferDB application. On
+the database side I wrote the complete \texttt{init.sql}: I extended
+the Project 1 schema with a \texttt{Suspension} table and a
+\texttt{Club.city} column, authored all seven triggers that enforce
+the business rules that SQL \texttt{CHECK} cannot express
+(120-minute scheduling gap on insert, attendance $\leq$ stadium
+capacity on insert and update, $\leq$11 starters / $\leq$23 squad per
+club per match, $\geq$11 players at result-submission time, the
+loan-vs-parent-club ban, the suspension block against carded players,
+C8 city consistency, and C9 no overlapping contracts of the same
+type), and authored the two stored procedures. The transfer procedure
+auto-terminates the player's previous Permanent contract, writes the
+new Contract and Transfer\_Record, and updates \texttt{market\_value}
+for Purchase transfers. The match-result procedure applies the forum
+\#4 reset semantics: it inserts Suspension rows for red cards and for
+5-yellow accumulations (with the window bounded to matches strictly
+after the player's last served suspension in the same competition),
+and marks prior suspensions as served when the player was kept out of
+the squad of their club's next match. I also added the
+\texttt{@DISABLE\_TRIGGERS} session-variable bypass so the
+intentionally-invalid seed records described in spec \S2.3 can be
+loaded without tripping the validation triggers, while any direct
+MySQL client write outside the seed path remains fully protected.
+
+On the application side I wrote \texttt{app.py} as a single Flask
+module covering all 18 key operations for the four roles, with
+\texttt{@current\_user\_id}/\texttt{@current\_user\_role} session
+variables pushed on every database connection so the referee-only
+match-result rule survives even when the web interface is bypassed
+from a MySQL client. I authored every SQL query manually (no ORM),
+used \texttt{\%s} parameterized placeholders everywhere for injection
+safety, and implemented the password policy and bcrypt hashing. I
+wrote all 22 Jinja templates (role-aware navigation, per-role
+dashboards, match squad selection, match-result entry, fixtures,
+standings, squad statistics, competition leaderboards, career
+history, and the DB Manager CRUD forms). I rewrote
+\texttt{import\_users.py} to ingest all eleven
+\texttt{initial\_data.xlsx} sheets in FK-safe order with NaN
+coercion, and I brought up the MySQL container under Docker to
+smoke-test every page end-to-end and to verify each trigger
+rejection via direct \texttt{mysql} client.
+
+\textbf{Collaboration \& Challenges.}
+We split the work cleanly: I owned implementation and debugging, my
+teammate owned the written analysis in Part 3 and the testing
+scenarios against the spec. We synced through the shared repository
+and reconciled whenever a schema decision affected the normalization
+write-up. The hardest part was the suspension lifecycle: MySQL
+forbids a trigger from modifying the same table it fires on, which
+pushed the auto-termination of the previous Permanent contract into
+a stored procedure rather than a trigger, and the forum \#4 reset
+rule required a correctly-windowed yellow-card sum subquery.
+
+\textbf{Self-Assessment.}
+I strengthened my understanding of trigger semantics, of how to
+propagate authentication context into the database through session
+variables, and of where the boundary between
+\texttt{CHECK}-expressible and trigger-expressible constraints
+actually lies. Next time I would invest earlier in integration tests
+that call the stored procedures directly from a MySQL client rather
+than only through the web app.
+
+\textbf{Use of AI Tools.}
+No AI tools were used for this project. All code, SQL, and
+documentation were written by the team.
+
+\end{document}

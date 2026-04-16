@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Top Listeler{% endblock %}
+{% block body %}
+<h2>Competition Top Listeleri</h2>
+<form method="GET">
+  <label>Competition:</label>
+  <select name="competition_id">
+    <option value="">—</option>
+    {% for c in comps %}<option value="{{ c.competition_ID }}" {% if c.competition_ID|string==sel_comp %}selected{% endif %}>{{ c.name }} ({{ c.season }})</option>{% endfor %}
+  </select>
+  <button type="submit">Goster</button>
+</form>
+
+{% macro render(title, rows, label) %}
+  <h3>{{ title }} (Top 10)</h3>
+  <table>
+    <tr><th>Oyuncu</th><th>Kulup</th><th>Oynanan</th><th>{{ label }}</th></tr>
+    {% for r in rows %}
+    <tr><td>{{ r.name }} {{ r.surname }}</td><td>{{ r.club_name }}</td>
+        <td>{{ r.played }}</td><td>{{ r.metric }}</td></tr>
+    {% endfor %}
+  </table>
+{% endmacro %}
+
+{% if top_goals %}
+  {{ render('En Cok Gol Atan', top_goals, 'Gol') }}
+  {{ render('En Cok Asist Yapan', top_assists, 'Asist') }}
+  {{ render('En Yuksek Ort. Rating (min 3 mac)', top_rating, 'Ort. Rating') }}
+{% endif %}
+{% endblock %}

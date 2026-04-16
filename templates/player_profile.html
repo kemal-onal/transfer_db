@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}Profil{% endblock %}
+{% block body %}
+<h2>Profil</h2>
+{% if p %}
+<table>
+  <tr><th>Isim</th><td>{{ p.name }} {{ p.surname }}</td></tr>
+  <tr><th>Yas</th><td>{{ p.age }}</td></tr>
+  <tr><th>Uyruk</th><td>{{ p.nationality }}</td></tr>
+  <tr><th>Mevcut kulup</th><td>{{ p.current_club or '-' }}</td></tr>
+  <tr><th>Boy</th><td>{{ p.height }} cm</td></tr>
+  <tr><th>Ana pozisyon</th><td>{{ p.main_position }}</td></tr>
+  <tr><th>Guclu ayak</th><td>{{ p.strong_foot }}</td></tr>
+  <tr><th>Piyasa degeri</th><td>{{ p.market_value }}</td></tr>
+</table>
+{% endif %}
+{% endblock %}

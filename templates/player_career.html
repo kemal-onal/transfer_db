@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Kariyer{% endblock %}
+{% block body %}
+<h2>Kontrat Gecmisi</h2>
+<table>
+  <tr><th>Kulup</th><th>Tip</th><th>Baslangic</th><th>Bitis</th><th>Haftalik ucret</th></tr>
+  {% for c in contracts %}
+  <tr>
+    <td>{{ c.club_name }}</td><td>{{ c.contract_type }}</td>
+    <td>{{ c.start_date }}</td><td>{{ c.end_date }}</td><td>{{ c.weekly_wage }}</td>
+  </tr>
+  {% endfor %}
+</table>
+
+<h2>Transfer Gecmisi</h2>
+<table>
+  <tr><th>Tarih</th><th>Tur</th><th>Ucret</th><th>Kaynak</th><th>Hedef</th></tr>
+  {% for t in transfers %}
+  <tr>
+    <td>{{ t.transfer_date }}</td><td>{{ t.transfer_type }}</td>
+    <td>{{ t.transfer_fee }}</td>
+    <td>{{ t.from_name or '-' }}</td><td>{{ t.to_name }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

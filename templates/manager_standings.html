@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}Puan Durumu{% endblock %}
+{% block body %}
+<h2>Puan Durumu — {{ club.club_name }}</h2>
+<form method="GET">
+  <label>Competition (League):</label>
+  <select name="competition_id">
+    <option value="">—</option>
+    {% for c in comps %}<option value="{{ c.competition_ID }}" {% if c.competition_ID|string==sel_comp %}selected{% endif %}>{{ c.name }} ({{ c.season }})</option>{% endfor %}
+  </select>
+  <button type="submit">Goster</button>
+</form>
+{% if standings %}
+<table>
+  <tr><th>#</th><th>Kulup</th><th>O</th><th>G</th><th>B</th><th>M</th>
+      <th>AG</th><th>YG</th><th>AV</th><th>P</th></tr>
+  {% for r in standings %}
+  <tr>
+    <td>{{ loop.index }}</td><td>{{ r.club_name }}</td>
+    <td>{{ r.played }}</td><td>{{ r.wins }}</td>
+    <td>{{ r.draws }}</td><td>{{ r.losses }}</td>
+    <td>{{ r.gf }}</td><td>{{ r.ga }}</td><td>{{ r.gd }}</td>
+    <td><strong>{{ r.points }}</strong></td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+{% endblock %}

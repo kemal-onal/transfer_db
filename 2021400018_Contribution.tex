@@ -1,0 +1,88 @@
+\documentclass[12pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{times}
+\usepackage{setspace}
+\usepackage{enumitem}
+\onehalfspacing
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+
+\begin{document}
+
+\begin{center}
+\textbf{\large Individual Contribution Report --- Project 2}\\[4pt]
+TransferDB Application --- CMPE 321, Spring 2026
+\end{center}
+
+\vspace{2pt}
+
+\textbf{Personal Information.}
+Name: Kemal \"{O}nal \quad Student ID: 2021400018 \quad Group Number: 01
+
+\textbf{Tasks \& Contributions.}
+I owned the analytical, documentation, and quality-assurance side of
+Project 2. My primary deliverable was \texttt{part3.pdf}, the Schema
+Refinement and Normalization report: I enumerated the non-trivial
+functional dependencies for every relation strictly from the rules
+stated in the project specification (following forum \#2's guidance
+that FDs must come from explicit constraints rather than real-world
+assumptions), including the family of candidate keys
+\texttt{(stadium\_ID, match\_datetime)},
+\texttt{(referee\_ID, match\_datetime)}, and the two club variants
+that the 120-minute rule forces into existence. I then analyzed each
+relation for BCNF compliance and identified
+\texttt{stadium\_ID} $\to$ \texttt{city} in Club as the single
+BCNF-violating dependency, wrote up the tradeoff between decomposing
+Club into a BCNF-compliant pair versus keeping the redundancy in
+check via triggers, and justified our decision to retain Club in 3NF
+so that the C8 ``club city equals stadium city'' rule can be enforced
+locally without subquery checks in every insert.
+
+I also compiled the constraints-added catalog (the full mapping from
+each business rule to its enforcement mechanism --- CHECK vs.\
+trigger vs.\ stored procedure), reviewed the seven triggers and two
+stored procedures against the spec to confirm every rule in \S2.2,
+\S2.3, and \S4 has a database-level enforcement path, and documented
+how the four forum clarifications (strict enum for competition type,
+FD listing scope, no suspension carry-over across seasons, and
+concurrent red + 5-yellow resolving to a single-match ban with a
+yellow-count reset) are reflected in the schema and procedures. I
+tracked those clarifications in \texttt{forum\_clarifications.md} so
+they stay discoverable for future iterations.
+
+On the QA side I designed the spec-compliance test scenarios --- past
+match scheduling, 120-minute conflicts on shared stadium/referee/club,
+squad-size boundaries (below 11, exactly 11, above 23), referee-only
+result submission with and without the session variables set,
+suspended-player squad insertion, and Permanent auto-termination via
+the transfer procedure --- and validated each against a running MySQL
+container from a direct client. I reviewed the Flask templates for
+role-appropriate data exposure and consistency of Turkish labeling,
+and I prepared the final submission packaging, ensuring the ZIP
+layout matches spec \S6.
+
+\textbf{Collaboration \& Challenges.}
+My teammate and I split responsibilities along a clean seam: he
+owned schema, triggers, stored procedures, backend, and templates;
+I owned the normalization analysis, the constraint catalog, the test
+scenarios, and the submission report. We synced via the shared
+repository whenever a schema decision affected the write-up (for
+example, when the suspension table design changed we reworked the
+Match\_Stats BCNF argument to reflect the new FDs). The hardest part
+was being rigorous about the FD derivation: real-world football
+intuitions kept suggesting FDs that were not actually justified by
+spec text, and the forum \#2 guidance forced me to drop several of
+them.
+
+\textbf{Self-Assessment.}
+Writing Part 3 sharpened my understanding of the difference between
+3NF and BCNF in practice, and of why the ``right'' normal form is
+sometimes not BCNF when enforcement cost is considered. Working
+alongside the implementation also gave me a clearer picture of which
+constraints realistically require triggers rather than CHECK.
+
+\textbf{Use of AI Tools.}
+No AI tools were used for this project. All code, SQL, and
+documentation were written by the team.
+
+\end{document}

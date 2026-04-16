@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}Mac Gecmisi{% endblock %}
+{% block body %}
+<h2>Mac Gecmisi</h2>
+<table>
+  <tr><th>Tarih</th><th>Competition</th><th>Stadyum</th><th>Rakip</th>
+      <th>Skor</th><th>Dk</th><th>Pozisyon</th><th>G</th><th>A</th>
+      <th>Y</th><th>R</th><th>Rating</th></tr>
+  {% for m in matches %}
+  <tr>
+    <td>{{ m.match_datetime }}</td>
+    <td>{{ m.comp_name }} ({{ m.season }})</td>
+    <td>{{ m.stadium_name }}</td>
+    <td>{{ m.opp_name }}</td>
+    <td>{% if m.home_goals is none %}Scheduled{% else %}{{ m.home_goals }}-{{ m.away_goals }}{% endif %}</td>
+    <td>{{ m.minutes_played }}</td>
+    <td>{{ m.position_played }}</td>
+    <td>{{ m.goals }}</td><td>{{ m.assists }}</td>
+    <td>{{ m.yellow_cards }}</td><td>{{ m.red_cards }}</td>
+    <td>{{ m.rating or '-' }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

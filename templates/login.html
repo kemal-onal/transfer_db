@@ -1,39 +1,20 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>TransferDB - Login</title>
-</head>
-<body>
-    <h2>TransferDB Login</h2>
-    
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}
-        <ul>
-        {% for message in messages %}
-          <li>{{ message }}</li>
-        {% endfor %}
-        </ul>
-      {% endif %}
-    {% endwith %}
-
-    <form method="POST" action="/login">
-        <label>Role:</label>
-        <select name="role">
-            <option value="Player">Player</option>
-            <option value="Manager">Manager</option>
-            <option value="Referee">Referee</option>
-            <option value="DBManager">Database Manager</option>
-        </select><br><br>
-        
-        <label>Username:</label>
-        <input type="text" name="username" required><br><br>
-        
-        <label>Password:</label>
-        <input type="password" name="password" required><br><br>
-        
-        <button type="submit">Giris Yap</button>
-    </form>
-    <br>
-    <a href="/register">No account? Register</a>
-</body>
-</html>
+{% extends 'base.html' %}
+{% block title %}Giris{% endblock %}
+{% block body %}
+<h2>TransferDB - Giris</h2>
+<form method="POST" action="{{ url_for('login') }}">
+  <div class="kv">
+    <label>Rol:</label>
+    <select name="role" required>
+      <option value="Player">Oyuncu</option>
+      <option value="Manager">Menajer</option>
+      <option value="Referee">Hakem</option>
+      <option value="DBManager">Veritabani Yoneticisi</option>
+    </select>
+    <label>Kullanici adi:</label><input name="username" required>
+    <label>Sifre:</label><input type="password" name="password" required>
+  </div>
+  <br><button type="submit">Giris Yap</button>
+</form>
+<p><a href="{{ url_for('register') }}">Hesap yok? Kayit Ol</a></p>
+{% endblock %}

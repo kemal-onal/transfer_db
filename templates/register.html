@@ -1,37 +1,76 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>TransferDB - Kayit</title>
-</head>
-<body>
-    <h2>Yeni Kullanici Kaydi</h2>
+{% extends 'base.html' %}
+{% block title %}Kayit{% endblock %}
+{% block body %}
+<h2>Yeni Kullanici Kaydi</h2>
+<form method="POST" action="{{ url_for('register') }}">
+<div class="kv">
+  <label>Rol:</label>
+  <select name="role" id="role" required onchange="showFields()">
+    <option value="Player">Oyuncu</option>
+    <option value="Manager">Menajer</option>
+    <option value="Referee">Hakem</option>
+    <option value="DBManager">Veritabani Yoneticisi</option>
+  </select>
+  <label>Kullanici adi:</label><input name="username" required>
+  <label>Sifre:</label><input type="password" name="password" required>
+</div>
+<small>Sifre: 8+ karakter, buyuk+kucuk harf, rakam, ozel karakter</small>
 
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}
-        <ul>
-        {% for message in messages %}
-          <li>{{ message }}</li>
-        {% endfor %}
-        </ul>
-      {% endif %}
-    {% endwith %}
+<fieldset id="person_fields">
+  <legend>Kisisel Bilgiler</legend>
+  <div class="kv">
+    <label>Isim:</label><input name="name">
+    <label>Soyisim:</label><input name="surname">
+    <label>Uyruk:</label><input name="nationality">
+    <label>Dogum tarihi:</label><input type="date" name="date_of_birth">
+  </div>
+</fieldset>
 
-    <form method="POST" action="/register">
-        <label>Kayit Olunacak Rol (sadece ornek):</label>
-        <select name="role">
-            <option value="Player">Player</option>
-        </select><br><br>
-        
-        <label>Kullanici Adi:</label>
-        <input type="text" name="username" required><br><br>
-        
-        <label>Sifre:</label>
-        <input type="password" name="password" required>
-        <small>en az 8 karakter, 1 buyuk/kucuk harf, 1 rakam, 1 ozel karakter</small><br><br>
-        
-        <button type="submit">Kayit Ol</button>
-    </form>
-    <br>
-    <a href="/login">Giris Ekranina Don</a>
-</body>
-</html>
+<fieldset id="player_fields">
+  <legend>Oyuncu Bilgileri</legend>
+  <div class="kv">
+    <label>Piyasa degeri:</label><input type="number" step="0.01" name="market_value">
+    <label>Ana pozisyon:</label>
+    <select name="main_position">
+      <option>Goalkeeper</option><option>Defender</option>
+      <option>Midfielder</option><option>Forward</option>
+    </select>
+    <label>Guclu ayak:</label>
+    <select name="strong_foot">
+      <option>Right</option><option>Left</option><option>Both</option>
+    </select>
+    <label>Boy (cm):</label><input type="number" name="height">
+  </div>
+</fieldset>
+
+<fieldset id="manager_fields">
+  <legend>Menajer Bilgileri</legend>
+  <div class="kv">
+    <label>Tercih edilen formasyon:</label><input name="preferred_formation" placeholder="ornek: 4-3-3">
+    <label>Deneyim seviyesi:</label><input name="experience_level" placeholder="ornek: Senior">
+  </div>
+</fieldset>
+
+<fieldset id="referee_fields">
+  <legend>Hakem Bilgileri</legend>
+  <div class="kv">
+    <label>Lisans seviyesi:</label><input name="license_level" placeholder="ornek: FIFA">
+    <label>Deneyim yili:</label><input type="number" name="years_of_experience">
+  </div>
+</fieldset>
+
+<br><button type="submit">Kayit Ol</button>
+</form>
+<p><a href="{{ url_for('login') }}">Giris ekranina don</a></p>
+
+<script>
+function showFields() {
+  const r = document.getElementById('role').value;
+  document.getElementById('person_fields').style.display  = (r === 'DBManager') ? 'none' : '';
+  document.getElementById('player_fields').style.display  = (r === 'Player')    ? '' : 'none';
+  document.getElementById('manager_fields').style.display = (r === 'Manager')   ? '' : 'none';
+  document.getElementById('referee_fields').style.display = (r === 'Referee')   ? '' : 'none';
+}
+showFields();
+</script>
+{% endblock %}
