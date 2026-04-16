@@ -407,6 +407,9 @@ def set_squad():
                   (match_ID, player_id, club_id, is_starter, position_played)
                 VALUES (%s, %s, %s, %s, 'To be set')
             """, (match_id, p_id, club_id, is_starter))
+        # DB-level post-insert guard: enforce 11<=squad<=23 via stored proc.
+        # If it signals, the except below rolls back all the inserts above.
+        cur.callproc('sp_validate_match_squad', [int(match_id), int(club_id)])
         conn.commit()
         flash("Kadro basariyla guncellendi.")
     except mysql.connector.Error as e:
@@ -491,15 +494,15 @@ def manager_standings():
                    SUM(CASE WHEN (m.home_club_ID = cl.club_ID AND m.home_goals < m.away_goals)
                              OR (m.away_club_ID = cl.club_ID AND m.away_goals < m.home_goals)
                             THEN 1 ELSE 0 END) AS losses,
-                   SUM(CASE WHEN m.home_club_ID = cl.club_ID THEN m.home_goals
-                            WHEN m.away_club_ID = cl.club_ID THEN m.away_goals
-                            ELSE 0 END) AS gf,
-                   SUM(CASE WHEN m.home_club_ID = cl.club_ID THEN m.away_goals
-                            WHEN m.away_club_ID = cl.club_ID THEN m.home_goals
-                            ELSE 0 END) AS ga
+                   COALESCE(SUM(CASE WHEN m.home_club_ID = cl.club_ID THEN m.home_goals
+                                     WHEN m.away_club_ID = cl.club_ID THEN m.away_goals
+                                     ELSE 0 END), 0) AS gf,
+                   COALESCE(SUM(CASE WHEN m.home_club_ID = cl.club_ID THEN m.away_goals
+                                     WHEN m.away_club_ID = cl.club_ID THEN m.home_goals
+                                     ELSE 0 END), 0) AS ga
               FROM Club cl
               JOIN `Match` m ON (m.home_club_ID = cl.club_ID OR m.away_club_ID = cl.club_ID)
-             WHERE m.competition_ID = %s AND m.home_goals IS NOT NULL
+             WHERE m.competition_ID = %s
              GROUP BY cl.club_ID, cl.club_name
              ORDER BY (
                  SUM(CASE WHEN (m.home_club_ID = cl.club_ID AND m.home_goals > m.away_goals)

@@ -639,4 +639,31 @@ BEGIN
     ON DUPLICATE KEY UPDATE reason = 'combined';
 END //
 
+-- sp_validate_match_squad — called by manager's set_squad flow after the
+-- per-player INSERTs.  The BEFORE-INSERT trigger already bounds the squad
+-- above (11 starters / 23 total), but the minimum size of 11 cannot be
+-- checked per-row (the count grows as rows are inserted).  This procedure
+-- runs as a post-insert guard: if the final squad for this (match, club)
+-- has fewer than 11 players, it raises SQLSTATE 45000 so the surrounding
+-- transaction rolls back.  Spec §2.2/5: "the total squad must be between
+-- 11 and 23 players".
+CREATE PROCEDURE sp_validate_match_squad(
+    IN p_match_id INT,
+    IN p_club_id  INT
+)
+BEGIN
+    DECLARE v_count INT;
+    SELECT COUNT(*) INTO v_count
+      FROM Match_Stats
+     WHERE match_ID = p_match_id AND club_id = p_club_id;
+    IF v_count < 11 THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'kadro en az 11 oyuncu icermelidir';
+    END IF;
+    IF v_count > 23 THEN
+        SIGNAL SQLSTATE '45000'
+          SET MESSAGE_TEXT = 'kadro en fazla 23 oyuncu icerebilir';
+    END IF;
+END //
+
 DELIMITER ;
